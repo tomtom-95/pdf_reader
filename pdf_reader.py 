@@ -4,6 +4,22 @@ from py_pdf_parser.components import PDFDocument
 from py_pdf_parser.loaders import load_file
 import pandas as pd
 
+RETRIBUZIONE = ("Retribuzione", 0)
+CESTINI = ("Cestini", 1)
+DIARIA = ("Diaria", 2)
+MALATTIA_CARENZA = ("Malattia-Carenza", 3)
+
+def get_filter_for_retribution_dates(page):
+    if len(el:=page.elements.filter_by_text_contains(RETRIBUZIONE[0])) == 1: return RETRIBUZIONE, el
+    elif len(el:=page.elements.filter_by_text_contains(CESTINI[0])) == 1: return CESTINI, el
+    elif len(el:=page.elements.filter_by_text_contains(DIARIA[0])) == 2:
+        el = el.indexes[0]
+        return DIARIA, el
+    elif len(el:=page.elements.filter_by_text_contains(MALATTIA_CARENZA[0])) == 1:  return MALATTIA_CARENZA, el
+    else:
+        print("Error in extracting dates")
+        return None
+
 def extract(doc:PDFDocument):
     name = []
     fiscal_code = []
@@ -12,6 +28,7 @@ def extract(doc:PDFDocument):
     retribution_date_al = []
     qualifica = []
     lordo = []
+
     for page in doc.pages:
         name_and_fiscal_code = [el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Nome:").extract_single_element())]
         name.append(re.sub(" +", " ", name_and_fiscal_code[0]))
@@ -19,22 +36,25 @@ def extract(doc:PDFDocument):
 
         tmp = []
         for date in find_dates([el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Data pagamento:").extract_single_element())][0]):
+            print(page.page_number)
             tmp.append(date.strftime("%d/%m/%Y"))
         payment_date.append(tmp[0])
 
-        tmp = []
-        for date in find_dates(page.elements.filter_by_text_contains("Retribuzione").extract_single_element().text()):
+        if (retribution:=get_filter_for_retribution_dates(page)) == None:
+            return None
+
+        for date in find_dates(retribution[1].extract_single_element().text()):
             tmp.append(date.strftime("%d/%m/%Y"))
         retribution_date_dal.append(tmp[0])
         retribution_date_al.append(tmp[1])
 
         qualifica.append([el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Qualifica:").extract_single_element())][0])
         lordo.append([el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("LORDO").extract_single_element())][0])
-    return name, fiscal_code, payment_date, retribution_date_dal, retribution_date_al, qualifica, lordo
+    return name, fiscal_code, payment_date, retribution_date_dal, retribution_date_al, retribution[0], qualifica, lordo
 
 def main():
-    doc = load_file("./Dataset/Buste_1_3.pdf")
-    name, fiscal_code, payment_date, retribution_date_dal, retribution_date_al, qualifica, lordo = extract(doc)
+    doc = load_file("./Dataset/Busta_024.pdf")
+    name, fiscal_code, payment_date, retribution_date_dal, retribution_date_al, retribution_name, qualifica, lordo = extract(doc)
     data = {
         "nome": name,
         "codice_fiscale": fiscal_code, 
