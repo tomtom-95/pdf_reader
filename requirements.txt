@@ -1,7 +1,6 @@
 cffi==1.16.0
 charset-normalizer==3.3.2
 cryptography==41.0.7
-datefinder==0.7.3
 docopt==0.6.2
 numpy==1.26.2
 pandas==2.1.4

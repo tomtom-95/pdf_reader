@@ -1,31 +1,16 @@
 import re
-from datefinder import find_dates
 from py_pdf_parser.components import PDFDocument
 from py_pdf_parser.loaders import load_file
 import pandas as pd
 
-RETRIBUZIONE = ("Retribuzione", 0)
-CESTINI = ("Cestini", 1)
-DIARIA = ("Diaria", 2)
-MALATTIA_CARENZA = ("Malattia-Carenza", 3)
-
-def get_filter_for_retribution_dates(page):
-    if len(el:=page.elements.filter_by_text_contains(RETRIBUZIONE[0])) == 1: return RETRIBUZIONE, el
-    elif len(el:=page.elements.filter_by_text_contains(CESTINI[0])) == 1: return CESTINI, el
-    elif len(el:=page.elements.filter_by_text_contains(DIARIA[0])) == 2:
-        el = el.indexes[0]
-        return DIARIA, el
-    elif len(el:=page.elements.filter_by_text_contains(MALATTIA_CARENZA[0])) == 1:  return MALATTIA_CARENZA, el
-    else:
-        print("Error in extracting dates")
-        return None
+date_pattern = r'\b\d{2}/\d{2}/\d{4}\b'
 
 def extract(doc:PDFDocument):
     name = []
     fiscal_code = []
-    payment_date = []
-    retribution_date_dal = []
-    retribution_date_al = []
+    dates_pay = []
+    dates_dal = []
+    dates_al = []
     qualifica = []
     lordo = []
 
@@ -33,34 +18,30 @@ def extract(doc:PDFDocument):
         name_and_fiscal_code = [el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Nome:").extract_single_element())]
         name.append(re.sub(" +", " ", name_and_fiscal_code[0]))
         fiscal_code.append(name_and_fiscal_code[2])
-
-        tmp = []
-        for date in find_dates([el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Data pagamento:").extract_single_element())][0]):
-            print(page.page_number)
-            tmp.append(date.strftime("%d/%m/%Y"))
-        payment_date.append(tmp[0])
-
-        if (retribution:=get_filter_for_retribution_dates(page)) == None:
+        dates_pay = [el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Data pagamento:").extract_single_element())][0]
+        if len(el:=page.elements.filter_by_text_contains("Diaria dal")) == 1: pass
+        elif len(el:=page.elements.filter_by_text_contains("Cestini dal")) == 1: pass
+        elif len(el:=page.elements.filter_by_text_contains("Retribuzione dal")) == 1: pass
+        elif len(el:=page.elements.filter_by_text_contains("Malattia-Carenza dal")) == 1: pass
+        else:
+            print(f"Error on page {page.page_number}")
             return None
-
-        for date in find_dates(retribution[1].extract_single_element().text()):
-            tmp.append(date.strftime("%d/%m/%Y"))
-        retribution_date_dal.append(tmp[0])
-        retribution_date_al.append(tmp[1])
-
+        dates = re.findall(date_pattern, el.extract_single_element().text())
+        dates_dal.append(dates[0])
+        dates_al.append(dates[1])
         qualifica.append([el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Qualifica:").extract_single_element())][0])
         lordo.append([el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("LORDO").extract_single_element())][0])
-    return name, fiscal_code, payment_date, retribution_date_dal, retribution_date_al, retribution[0], qualifica, lordo
+    return name, fiscal_code, dates_pay, dates_dal, dates_al, qualifica, lordo
 
 def main():
-    doc = load_file("./Dataset/Busta_024.pdf")
-    name, fiscal_code, payment_date, retribution_date_dal, retribution_date_al, retribution_name, qualifica, lordo = extract(doc)
+    doc = load_file("./Dataset/Buste_001_050.pdf")
+    name, fiscal_code, dates_pay, dates_dal, dates_al, qualifica, lordo = extract(doc)
     data = {
         "nome": name,
         "codice_fiscale": fiscal_code, 
-        "data_pagamento": payment_date,
-        "data_retribuzione_dal": retribution_date_dal,
-        "data_retribuzione_al": retribution_date_al,
+        "data_pagamento": dates_pay,
+        "data_retribuzione_dal": dates_dal,
+        "data_retribuzione_al": dates_al,
         "qualifica": qualifica,
         "lordo": lordo
     }
