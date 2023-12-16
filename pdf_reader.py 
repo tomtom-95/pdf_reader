@@ -23,6 +23,7 @@ def extract(doc:PDFDocument):
         elif len(el:=page.elements.filter_by_text_contains("Cestini dal")) == 1: pass
         elif len(el:=page.elements.filter_by_text_contains("Retribuzione dal")) == 1: pass
         elif len(el:=page.elements.filter_by_text_contains("Malattia-Carenza dal")) == 1: pass
+        elif len(el:=page.elements.filter_by_text_contains("Malattia dal")) == 1: pass
         else:
             print(f"Error on page {page.page_number}")
             return None
@@ -34,7 +35,7 @@ def extract(doc:PDFDocument):
     return name, fiscal_code, dates_pay, dates_dal, dates_al, qualifica, lordo
 
 def main():
-    doc = load_file("./Dataset/Buste_001_050.pdf")
+    doc = load_file("./Dataset/Buste.pdf")
     name, fiscal_code, dates_pay, dates_dal, dates_al, qualifica, lordo = extract(doc)
     data = {
         "nome": name,
