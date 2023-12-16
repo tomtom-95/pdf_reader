@@ -18,7 +18,7 @@ def extract(doc:PDFDocument):
         name_and_fiscal_code = [el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Nome:").extract_single_element())]
         name.append(re.sub(" +", " ", name_and_fiscal_code[0]))
         fiscal_code.append(name_and_fiscal_code[2])
-        dates_pay = [el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Data pagamento:").extract_single_element())][0]
+        dates_pay.append([el.text() for el in doc.elements.to_the_right_of(page.elements.filter_by_text_equal("Data pagamento:").extract_single_element())][0])
         if len(el:=page.elements.filter_by_text_contains("Diaria dal")) == 1: pass
         elif len(el:=page.elements.filter_by_text_contains("Cestini dal")) == 1: pass
         elif len(el:=page.elements.filter_by_text_contains("Retribuzione dal")) == 1: pass
@@ -47,6 +47,7 @@ def main():
         "lordo": lordo
     }
     df = pd.DataFrame(data=data)
+    df.to_excel("./Out/out.xlsx", sheet_name="società per ricatto")
     print(df)
 
 if __name__ == "__main__":
